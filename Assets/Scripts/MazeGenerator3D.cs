@@ -2,43 +2,34 @@
 using UnityEngine;
 using Cinemachine;
 
-/// <summary>
-/// Генерирует 3D-лабиринт алгоритмом "Growing Tree" с настраиваемой вероятностью ветвления,
-/// что обеспечивает сочетание длинных коридоров и множества тупиков.
-/// Добавляет заданное число петель для создания циклов.
-/// Камера — ортографическая сверху, адаптивно масштабируется под экран.
-/// При достижении финиша вызывается NextLevel(), увеличивая размер лабиринта и генерируя новый.
-/// Шарик спавнится на стартовой клетке (0,0).
-/// </summary>
 public class MazeGenerator3D : MonoBehaviour
 {
     [Header("Размер лабиринта")]
-    public int width = 5;
-    public int height = 5;
+    [SerializeField] private int width = 5;
+    [SerializeField] private int height = 5;
 
-    [Header("Инкремент размера")]
-    [Tooltip("На сколько клеток увеличиваем ширину и высоту при переходе на следующий уровень.")]
-    public int sizeIncrement = 2;
+    [Header("Увеличение размера")]
+    [SerializeField] private int sizeIncrement = 1;
 
     [Header("Генерация")]
-    [Range(0f, 1f), Tooltip("Вероятность выбора случайной клетки из списка вместо последней при росте.")]
-    public float branchingProbability = 0.5f;
-    [Tooltip("Количество петель (циклов) добавить после генерации.")]
-    public int loopsToAdd = 2;
+    [SerializeField, Range(0f, 1f), Tooltip("Вероятность выбора случайной клетки из списка вместо последней при росте.")]
+    private float branchingProbability = 0.5f;
+    [SerializeField, Tooltip("Количество петель (циклов) добавить после генерации.")]
+    private int loopsToAdd = 2;
 
     [Header("Префабы")]
-    public GameObject cubePrefab;
-    public GameObject ballPrefab;
+    [SerializeField] private GameObject cubePrefab;
+    [SerializeField] private GameObject ballPrefab;
 
     [Header("Параметры стен/пола")]
-    public float wallHeight = 1f;
-    public float wallThickness = 0.1f;
-    public float floorThickness = 0.1f;
+    [SerializeField] private float wallHeight = 1f;
+    [SerializeField] private float wallThickness = 0.1f;
+    [SerializeField] private float floorThickness = 0.1f;
 
     [Header("Камера")]
-    public CinemachineVirtualCamera vcam;
+    [SerializeField] private CinemachineVirtualCamera vcam;
     [Tooltip("Отступ камеры (в клетках)")]
-    public float cameraMargin = 0.5f;
+    [SerializeField] private float cameraMargin = 0.5f;
 
     private Cell[,] grid;
     private GameObject mazeParent, markersParent, cameraTarget, ballInstance;
@@ -75,7 +66,6 @@ public class MazeGenerator3D : MonoBehaviour
         SpawnBallAtStart();
     }
 
-    #region Growing Tree Generation
     void GrowingTree()
     {
         var rand = new System.Random();
@@ -104,7 +94,6 @@ public class MazeGenerator3D : MonoBehaviour
             }
             else
             {
-                // бэктрек
                 list.RemoveAt(idx);
             }
         }
@@ -133,9 +122,7 @@ public class MazeGenerator3D : MonoBehaviour
         if (dy == 1) { a.Walls[0] = false; b.Walls[2] = false; }
         if (dy == -1) { a.Walls[2] = false; b.Walls[0] = false; }
     }
-    #endregion
 
-    #region Add Loops
     void AddLoops(int count)
     {
         var allWalls = new List<(Cell, Cell)>();
@@ -153,9 +140,7 @@ public class MazeGenerator3D : MonoBehaviour
             RemoveWall(pair.Item1, pair.Item2);
         }
     }
-    #endregion
 
-    #region Visualization
     void BuildVisuals()
     {
         for (int x = 0; x < width; x++)
@@ -196,9 +181,7 @@ public class MazeGenerator3D : MonoBehaviour
         var w = Instantiate(cubePrefab, pos, rot, mazeParent.transform);
         w.transform.localScale = scale;
     }
-    #endregion
 
-    #region Camera & Ball
     void CreateCameraTarget()
     {
         var center = new Vector3((width - 1) * 0.5f, 0, (height - 1) * 0.5f);
@@ -229,16 +212,13 @@ public class MazeGenerator3D : MonoBehaviour
         var pos = new Vector3(0, floorThickness * 0.5f + ballPrefab.transform.localScale.y * 0.5f, 0);
         ballInstance = Instantiate(ballPrefab, pos, Quaternion.identity);
     }
-    #endregion
 
-    #region Next Level
     public void NextLevel()
     {
         width += sizeIncrement;
         height += sizeIncrement;
         GenerateLevel();
     }
-    #endregion
 }
 
 public class Cell

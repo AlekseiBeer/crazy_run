@@ -1,30 +1,21 @@
 using UnityEngine;
 
-/// <summary>
-/// Виртуальный джойстик для управления 3D-шариком без инерции.
-/// Размер джойстика определяется долей экрана (JoystickSizeRatio) и не превышает MaxJoystickRadius.
-/// Добавлена мёртвая зона (DeadZoneRatio).
-/// Движение за счёт установки Rigidbody.velocity, без накопления силы.
-/// </summary>
 [RequireComponent(typeof(Rigidbody))]
 public class VirtualJoystickController : MonoBehaviour
 {
-    [Header("Rigidbody шарика")]
-    public Rigidbody ballRigidbody;
-
     [Header("Скорость движения")]
-    [Tooltip("Скорость шарика по осям XZ.")]
-    public float moveSpeed = 5f;
+    [SerializeField, Tooltip("Скорость шарика по осям XZ.")]
+    private float moveSpeed = 3f;
 
     [Header("Размер джойстика")]
-    [Range(0.1f, 0.5f), Tooltip("Доля ширины экрана для диаметра джойстика.")]
-    public float joystickSizeRatio = 0.25f;
-    [Tooltip("Максимальный радиус джойстика в пикселях.")]
-    public float maxJoystickRadius = 150f;
+    [SerializeField, Range(0.1f, 0.5f), Tooltip("Доля ширины экрана для диаметра джойстика.")]
+    private float joystickSizeRatio = 0.35f;
+    [SerializeField] 
+    private float maxJoystickRadius = 400f;
+    [SerializeField, Range(0f, 1f)]
+    private float deadZoneRatio = 0.03f;
 
-    [Header("Мёртвая зона")]
-    [Range(0f, 1f), Tooltip("Минимальный ввод как доля радиуса, ниже которого игнорируем движение.")]
-    public float deadZoneRatio = 0.1f;
+    private Rigidbody ballRigidbody;
 
     // Текстуры
     private Texture2D baseTex;
@@ -42,12 +33,11 @@ public class VirtualJoystickController : MonoBehaviour
     {
         if (ballRigidbody == null)
             ballRigidbody = GetComponent<Rigidbody>();
-        // Создадим текстуры позже, когда будем знать размер
     }
 
     void Start()
     {
-        defaultCenter = new Vector2(Screen.width * 0.5f, Screen.height * 0.2f);
+        defaultCenter = new Vector2(Screen.width * 0.5f, Screen.height * 0.15f);
         joystickCenter = defaultCenter;
         inputVector = Vector2.zero;
         InitializeJoystickTextures();
@@ -55,13 +45,13 @@ public class VirtualJoystickController : MonoBehaviour
 
     void InitializeJoystickTextures()
     {
-        // Рассчитываем радиус джойстика
+        //радиус джойстика
         float desired = Screen.width * joystickSizeRatio * 0.5f;
         joystickRadius = Mathf.Min(desired, maxJoystickRadius);
         // Создаем текстуры круга
         int baseSize = Mathf.RoundToInt(joystickRadius * 2f);
         baseTex = CreateCircleTexture(baseSize, new Color(1, 1, 1, 0.3f));
-        // Ручка — чуть меньшего радиуса (60% от базы)
+        // Ручка
         int knobSize = Mathf.RoundToInt(joystickRadius * 1.2f);
         knobTex = CreateCircleTexture(knobSize, Color.white);
         // Установим начальную позицию ручки
@@ -75,22 +65,18 @@ public class VirtualJoystickController : MonoBehaviour
 
     void FixedUpdate()
     {
-        // Управление скоростью без инерции, с плавным нарастанием
         if (inputVector.magnitude > 0f)
         {
-            // Нормируем направление
-            Vector2 dir = inputVector.normalized;
-            // Интерполируем величину исходя из мёртвой зоны: от 0 при deadZone до 1 при границе джойстика
+            Vector2 dir = inputVector.normalized; // Нормируем направление
+            // Интерполируем
             float mag = inputVector.magnitude;
             float smooth = Mathf.InverseLerp(deadZoneRatio, 1f, mag);
-            // Плавная кривая ускорения (можно заменить на Mathf.Pow или SmoothStep)
             float speedFactor = Mathf.SmoothStep(0f, 1f, smooth);
             Vector3 vel = new Vector3(dir.x, 0f, dir.y) * moveSpeed * speedFactor;
             ballRigidbody.velocity = vel;
         }
         else
         {
-            // Останавливаем шарик
             ballRigidbody.velocity = Vector3.zero;
         }
     }
@@ -102,8 +88,11 @@ public class VirtualJoystickController : MonoBehaviour
             Touch t = Input.GetTouch(0);
             if (t.phase == TouchPhase.Began)
             {
-                isTouching = true;
-                joystickCenter = t.position;
+                if (t.position.y < Screen.height * 0.5)
+                {
+                    isTouching = true;
+                    joystickCenter = t.position;
+                }
             }
             else if ((t.phase == TouchPhase.Moved || t.phase == TouchPhase.Stationary) && isTouching)
             {
@@ -113,7 +102,7 @@ public class VirtualJoystickController : MonoBehaviour
                     delta = delta.normalized * joystickRadius;
                 knobPosition = joystickCenter + delta;
                 inputVector = delta / joystickRadius;
-                // Мёртвая зона
+
                 if (inputVector.magnitude < deadZoneRatio)
                 {
                     inputVector = Vector2.zero;
@@ -174,5 +163,3 @@ public class VirtualJoystickController : MonoBehaviour
         return tex;
     }
 }
-
-
